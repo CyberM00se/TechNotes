@@ -1,2 +1,3 @@
 # SysAdmin1
-I am going to move the tech journal to the wiki
+Tech Journal 1 is now in the wiki
+
