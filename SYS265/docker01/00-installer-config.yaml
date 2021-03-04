@@ -1,0 +1,11 @@
+# This is the network config written by 'subiquity'
+network:
+  ethernets:
+    ens160:
+      dhcp4: true
+      addresses: [10.0.5.12/24]
+      gateway4: 10.0.5.2
+      nameservers:
+        search: [noah.local]
+        addresses: [10.0.5.5]
+  version: 2
