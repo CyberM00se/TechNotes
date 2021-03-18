@@ -1,0 +1,9 @@
+[tomcat]
+ansible1-noah
+[webmin]
+ansible2-noah
+[windows]
+mgmt01-noah
+wks01-noah
+[windows:vars]
+ansible_shell_type=powershell
