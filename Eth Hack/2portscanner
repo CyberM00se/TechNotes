@@ -1,0 +1,11 @@
+#!/bin/bash
+
+hostvalue=$1
+portvalue=$2
+loopNum=$3
+
+echo "ip, port"
+for ((i=0; i <= $loopNum; i++)); do
+	echo "$hostvalue.$i, $portvalue"
+	timeout .1 bash -c "echo >/dev/tcp/$hostvalue.$i/$portvalue" 2>/dev/null &
+done
