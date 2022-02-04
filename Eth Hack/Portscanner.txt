@@ -1,0 +1,65 @@
+#!/bin/bash
+
+hostfile=
+portfile=
+
+function usage() {
+    cat <<USAGE
+
+    Usage: $0 [-hf file] [-pf file] [-h]
+
+    Options:
+        -hf | -hostfile:      The File of Hosts to Scan
+        -pf | -portfile:      The File of ports to scan
+	-h | -help:	      List Commands
+USAGE
+    exit 1
+}
+
+# if no arguments are provided, return usage function
+if [ $# -eq 0 ]; then
+    usage # run usage function
+    exit 1
+fi
+
+for arg in "$@"; do
+    case $arg in
+    -hf | -hostfile)
+	if [ $2 = "" ]; then
+		echo "Incorrect Use of Flag or invalid input"
+		return
+	else
+		hostfile=$2
+        	shift # Remove parameter from `$@`
+		shift # remove file after
+	fi
+        ;;
+    -pf | -portfile)
+    	if [ $2 = "" ]; then
+		echo "Incorrect Use of Flag or invalid input"
+		return
+	else
+		portfile=$2
+        	shift # Remove parameter from `$@`
+		shift # remove file after
+	fi
+        ;;
+    -h | --help)
+        usage # run usage function on help
+        ;;
+    *)
+        #usage # run usage function if wrong argument provided
+	#echo "Wrong Argument Provided"
+        ;;
+    esac
+done
+
+echo "host, port"
+for host in $(cat $hostfile); do
+	for port in $(cat $portfile); do
+		timeout .1 bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null &&
+			echo "$host,$port"
+	done
+done
+
+## Did this by myself so only some features are included.
