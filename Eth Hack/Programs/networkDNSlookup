@@ -1,0 +1,10 @@
+#!/bin/bash
+
+hostvalue=$1 ## just a prefix
+dnsserver=$2 ## Dns server
+loopNum=$3 
+
+for ((i=0; i <= 255; i++)); do
+	##echo "$hostvalue.$i, $portvalue"
+	nslookup $hostvalue.$i $dnsserver | grep "name ="
+done
