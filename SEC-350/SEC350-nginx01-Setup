@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#Update System
+echo "--------------"
+echo "Updating System"
+sudo apt update -y
+echo "Complete"
+
+#Install Git
+echo "--------------"
+echo "Installing Git"
+sudo apt install git -y
+echo "Complete"
+
+#Install Nginx
+echo "--------------"
+echo "Installing Nginx"
+sudo apt install nginx -y
+echo "Complete"
+
+#Download Repo
+echo "--------------"
+echo "Downloading Class Repo"
+
+git -C /home/noah/Documents/ clone https://github.com/CyPH3RSkULL5/TechNotes.git
+
+echo "Complete"
+
+#Check Hostname
+echo "--------------"
+echo "hostname is: " $(hostname) 
+echo "---"
+
+if [ "$(hostname)" = "nginx01-noah" ]; then
+	echo "Hostname Is Correct, Moving on"
+else
+	echo "hostname incorrect setting"
+	hostnamectl set-hostname nginx01-noah
+	echo "New Hostname Set"
+fi
+
+echo "--------------"
+
+#Check or create for noah-adm user
+echo "Checking for user noah-adm"
+
+if [ -f /home/noah-adm ]; then
+	echo "user exists"
+else
+	echo "User does not exist: Creating User"
+	sudo adduser noah-adm
+	sudo usermod -aG sudo noah-adm
+fi
+
+echo "--------------"
+
+#Copy Nginx Configs from downloaded Repo
+echo "making website directory"
+mkdir /var/www/website
+echo "Copying Index.html"
+cp /home/noah-adm/Documents/Technotes/SEC-350/index.html /var/www/website
+echo "Restarting Service"
+sudo service nginx restart
+echo "Complete"
+
+echo $(systemctl status nginx)
+
+
+
