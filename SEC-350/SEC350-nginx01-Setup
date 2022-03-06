@@ -1,13 +1,13 @@
 #!/bin/bash
 
-block() {
+block {
 	echo "------------------------------------------"
 	echo "##########################################"
 	echo "------------------------------------------"
 }
 
 #Update System
-echo block()
+block
 echo "Updating System"
 sudo apt update -y
 echo "Complete"
@@ -24,7 +24,7 @@ else
 fi
 
 #Install Git
-block()
+block
 if [[ $(command -v git) ]]; then
 	echo "Git is Already installed, Moving On"
 else
@@ -34,7 +34,7 @@ fi
 echo "Complete"
 
 #Install Nginx
-block()
+block
 if [[ $(command -v nginx) ]]; then
 	echo "Nginx is Already installed, Moving On"
 else
@@ -44,7 +44,7 @@ fi
 echo "Complete"
 
 #Download Repo
-block()
+block
 echo "Downloading Class Repo"
 
 git -C /home/noah-adm/Documents/ clone https://github.com/CyPH3RSkULL5/TechNotes.git
@@ -52,7 +52,7 @@ git -C /home/noah-adm/Documents/ clone https://github.com/CyPH3RSkULL5/TechNotes
 echo "Complete"
 
 #Check Hostname
-block()
+block
 echo "hostname is: " $(hostname) 
 echo "---"
 
@@ -64,7 +64,7 @@ else
 	echo "New Hostname Set"
 fi
 
-block()
+block
 
 #Copy Nginx Configs from downloaded Repo
 echo "Making website directory"
