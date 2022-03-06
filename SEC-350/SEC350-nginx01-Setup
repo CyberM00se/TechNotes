@@ -25,14 +25,22 @@ fi
 
 #Install Git
 block()
-echo "Installing Git"
-sudo apt install git -y
+if [[ $(command -v git) ]]; then
+	echo "Git is Already installed, Moving On"
+else
+	echo "Installing Git"
+	sudo apt install git -y
+fi
 echo "Complete"
 
 #Install Nginx
 block()
-echo "Installing Nginx"
-sudo apt install nginx -y
+if [[ $(command -v nginx) ]]; then
+	echo "Nginx is Already installed, Moving On"
+else
+	echo "Installing Nginx"
+	sudo apt install nginx -y
+fi
 echo "Complete"
 
 #Download Repo
@@ -59,16 +67,18 @@ fi
 block()
 
 #Copy Nginx Configs from downloaded Repo
-echo "making website directory"
-mkdir /var/www/website
+echo "Making website directory"
+echo
+sudo mkdir /var/www/website
 echo "Copying Index.html"
+echo
 cp /home/noah-adm/Documents/Technotes/SEC-350/index.html /var/www/website
 echo "Restarting Service"
 sudo service nginx restart
 
 echo $(systemctl status nginx | grep Active)
-
 echo "Complete"
 
+block
 
 
