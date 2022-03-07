@@ -71,12 +71,24 @@ fi
 block
 
 #Copy Nginx Configs from downloaded Repo
-echo "Making website directory"
-echo
-sudo mkdir /var/www/website
+echo "Checking Website directory"
+
+if [ -d "/var/www/website" ]; then
+	echo "Website directory Alreay Exists, Moving on"
+else
+	echo "Website Directory Does not Exist, Creating"
+	sudo mkdir /var/www/website
+fi
+block
 echo "Copying Index.html"
-echo
-cp /home/noah-adm/Documents/TechNotes/SEC-350/index.html /var/www/website
+if [ -f "/var/www/website/index.html" ]; then
+	echo "index.html already exits, Moving on"
+else
+	echo "index.html NOT present, copying"
+	sudo cp /home/noah-adm/Documents/TechNotes/SEC-350/index.html /var/www/website
+fi
+block
+
 echo "Restarting Service"
 sudo service nginx restart
 
