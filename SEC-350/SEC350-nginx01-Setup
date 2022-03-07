@@ -68,8 +68,6 @@ else
 	echo "New Hostname Set"
 fi
 
-block
-
 #Copy Nginx Configs from downloaded Repo
 block
 echo "Copying Index.html"
