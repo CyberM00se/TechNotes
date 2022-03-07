@@ -19,8 +19,9 @@ if [ -d "/home/noah-adm" ]; then
 	echo "User exists"
 else
 	echo "User does not exist: Creating User"
-	sudo adduser noah-adm
+	sudo useradd -m noah-adm
 	sudo usermod -aG sudo noah-adm
+	sudo passwd noah-adm
 fi
 
 #Install Git
