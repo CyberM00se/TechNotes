@@ -90,5 +90,13 @@ echo $(sudo systemctl status isc-dhcp-server.service | grep Active)
 echo "Complete"
 
 block
-
+echo "Copying Logging Config"
+if [ -f "/etc/rsyslog.d/sec350-DHCPv.conf" ]; then
+	echo "sec350-DHCPv.conf already exits, Replacing It"
+	sudo rm sec350-DHCPv.conf
+	sudo cp /home/noah-adm/TechNotes/SEC-350/sec350-DHCPv.conf /etc/rsyslog.d/
+else
+	echo "sec350-DHCPv.conf NOT present, copying"
+	sudo cp /home/noah-adm/TechNotes/SEC-350/sec350-DHCPv.conf /etc/rsyslog.d/
+fi
 

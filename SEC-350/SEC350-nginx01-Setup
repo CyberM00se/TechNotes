@@ -89,5 +89,13 @@ echo $(systemctl status nginx | grep Active)
 echo "Complete"
 
 block
-
+echo "Copying Logging Config"
+if [ -f "/etc/rsyslog.d/sec350.conf" ]; then
+	echo "sec350.conf already exits, Replacing It"
+	sudo rm sec350.conf
+	sudo cp /home/noah-adm/TechNotes/SEC-350/sec350.conf /etc/rsyslog.d/
+else
+	echo "sec350.conf NOT present, copying"
+	sudo cp /home/noah-adm/TechNotes/SEC-350/sec350.conf /etc/rsyslog.d/
+fi
 
