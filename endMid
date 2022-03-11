@@ -55,7 +55,7 @@ firewall {
         }
         rule 20 {
             action accept
-            description "Allow ssh to web01"
+            description "Allow ssh to Nginx from MGMT01-dylan"
             destination {
                 port 22
             }
@@ -88,7 +88,7 @@ firewall {
         }
         rule 10 {
             action accept
-            description "Allow WAN Access to Web01 HTTP"
+            description "Allow WAN Access to Nginx HTTP"
             destination {
                 address 172.16.50.5
                 port 80
@@ -138,7 +138,7 @@ interfaces {
 nat {
     destination {
         rule 10 {
-            description HTTP->WEB01
+            description HTTP to Nginx
             destination {
                 port 80
             }
