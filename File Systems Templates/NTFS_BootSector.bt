@@ -1,0 +1,55 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:   Yogesh Khatri
+// Revision:
+// Purpose:  For FOR 320 class, parses NTFS boot sector 
+//--------------------------------------
+
+typedef struct
+{
+	unsigned char 		bootjmp[3];
+	  signed char 		oem_name[8];            // NTFS
+	unsigned short 	    bytes_per_sector;
+	unsigned char		sectors_per_cluster;
+	unsigned short		reserved_sector_count; // 0 for NTFS
+	unsigned char		num_FATs;              // 0 for NTFS
+	unsigned short		max_root_dir_size; // max num of files in root dir (0 for FAT32)
+	unsigned short		total_sectors_16; // 0 for NTFS
+	unsigned char		media_type <format=hex>;
+	unsigned short		sectors_per_FAT; // 0 for FAT32, NTFS
+	unsigned short		sectors_per_track;
+	unsigned short		head_count;
+	unsigned int 		hidden_sector_count; // Starting sector/LBA of partition
+	unsigned int 		total_sectors_32; // 0 for NTFS
+} FAT_BS; // This is comon for all FAT 12 / 16 / 32 & NTFS
+
+typedef struct {
+    UBYTE reserved1[4];
+    UINT64 volumeSizeInSectors;      // This will be 1 less than the value in MBR
+    INT64 mftLCN;                   // LCN = logical cluster number 
+    INT64 mftMirrLCN;               // location of MFT backup copy
+    BYTE  bytesPerFileRecordSegment;// bytes per File record in MFT, If negative, interpret as 2 to the power abs(X), this is usually -10, so 2 to power 10 = 1024
+    BYTE  reserved2[3];
+    BYTE  clustersPerMftIndexRecord;// clusters per Index record in MFT
+    BYTE  reserved3[3];
+    INT64 volumeSerialNumber <format=hex>; // NTFS has 8 byte serial number, but DOS 'vol' or 'dir' will show only last 4 bytes. 
+    BYTE  reserved4[4];
+} NTFS_BS_EXT;
+
+
+///////////////////////////////////////////////////
+
+LittleEndian();
+
+local UINT64 volume_start_offset = 3D0FE00h; // <-- get from MBR or GPT
+
+//1: 810000h
+//2: 3F0FE00h
+//3: 3F10000h
+//4: 610FE00h
+
+FSeek(volume_start_offset);
+FAT_BS      bootsector <bgcolor=0xFF9966>;
+NTFS_BS_EXT ntfs       <bgcolor=cLtRed>;
