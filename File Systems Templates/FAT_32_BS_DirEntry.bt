@@ -1,0 +1,205 @@
+//--------------------------------------
+//--- 010 Editor v6.0 Binary Template
+//
+// File:
+// Author:    Yogesh Khatri
+// Revision: 
+// Purpose:   FAT 32 Boot Sector  parsing for FOR320
+//--------------------------------------
+// BOOT SECTOR / VBR 
+
+typedef struct
+{
+	unsigned char 		bootjmp[3];
+	  signed char 		oem_name[8];
+	unsigned short 	    bytes_per_sector;
+	unsigned char		sectors_per_cluster;
+	unsigned short		reserved_sector_count;
+	unsigned char		num_FATs;
+	unsigned short		max_root_dir_size; // max num of files in root dir (0 for FAT32)
+	unsigned short		total_sectors_16; //
+	unsigned char		media_type <format=hex>;
+	unsigned short		sectors_per_FAT; // 0 for FAT32
+	unsigned short		sectors_per_track;
+	unsigned short		head_count;
+	unsigned int 		hidden_sector_count; // Starting sector/LBA of partition
+	unsigned int 		total_sectors_32;
+} FAT_BS; // This is common for all FAT 12 / 16 / 32
+
+typedef struct
+{
+	unsigned char		bios_drive_num <format=hex>; // 00 for floppy, 0x80 for hard disks
+	unsigned char		reserved1;
+	unsigned char		boot_signature <format=hex>; // 0x28 or 0x29
+	unsigned int		volume_id <format=hex>; // volume serial number
+	  signed char		volume_label[11];
+	  signed char		fat_type_label[8]; // FAT12, FAT16, FAT32
+    unsigned char       boot_code[448];
+    unsigned short      signature <format=hex>; // 55 AA
+} FAT_BS_Ext; // ONLY for FAT 12 & FAT 16
+
+// FAT 32 BOOT SECTOR / VBR
+typedef struct 
+{
+	unsigned int		sectors_per_FAT;
+	unsigned short		extended_flags;
+	unsigned short		fat_version;
+	unsigned int		root_cluster_number; // Cluster number for Root directory, since it can be anywhere in DATA area for FAT32
+	unsigned short		fs_info_sector_num;
+	unsigned short		backup_BS_sector;
+	unsigned char 		reserved_0[12];
+	unsigned char		drive_number <format=hex>; // 0x80 for hdd, 00 for floppy
+	unsigned char 		reserved_1;
+	unsigned char		boot_signature; // 0x28 or 0x29
+	unsigned int 		volume_id <format=hex>;
+	  signed char		volume_label[11];
+	  signed char		fat_type_label[8];
+    unsigned char       boot_code[420];
+    unsigned short      signature <format=hex>; // 55 AA
+} FAT32_BS_Ext; // ONLY FOR FAT 32
+
+typedef struct
+{
+    char       signature[4];  // RRaA
+    byte       reserved[480];
+    char       signature2[4]; // rrAa
+    DWORD      free_cluster_count;
+    DWORD      next_free_cluster;
+    byte       reserved2[14];
+    WORD       signature3 <format=hex>; // 55 AA 
+} FAT32_FsInfo; // ONLY FOR FAT 32
+
+////////////// RESERVED AREA //////////////////
+typedef struct
+{
+  FAT_BS        BootSector;
+  FAT_BS_Ext    ExtBootSector;
+  unsigned char ReservedArea[(BootSector.reserved_sector_count - 1) * BootSector.bytes_per_sector];
+} FAT12_RESERVED_AREA, FAT16_RESERVED_AREA;
+
+typedef struct
+{
+  FAT_BS        BootSector;
+  FAT32_BS_Ext  ExtBootSector;
+  unsigned char ReservedArea[(BootSector.reserved_sector_count - 1) * BootSector.bytes_per_sector];
+  // To do, put FSInfo here..
+} FAT32_RESERVED_AREA;
+
+//////////// end RESERVED AREA ////////////////
+
+
+typedef struct
+{
+  char          Name[8];
+  char          Ext[3];
+  byte          AttributeFlags <format=binary>;
+  byte          Reserved;
+  unsigned byte Created10msResolution;
+  DOSTIME       CreatedTime;
+  DOSDATE       CreatedDate;
+  DOSDATE       AccessedDate;  
+  unsigned short ClusterHighBytes;
+  DOSTIME       ModifiedTime;
+  DOSDATE       ModifiedDate;  
+  unsigned short ClusterLowBytes;
+  unsigned int  FileSize;
+} DirEntry <read=ReadDirEntry>;
+
+string ReadDirEntry(DirEntry & d) {
+    local string ret;
+    SPrintf(ret, "%s .%s", d.Name, d.Ext);
+    return ret;
+}
+
+typedef struct
+{
+  byte      SequenceNum;
+  wchar_t   NamePart1[5];
+  byte      AttributeFlags <format=binary>;
+  byte      EntryType; // Reserved field
+  byte      Checksum;
+  wchar_t   NamePart2[6]; 
+  short     Zero;
+  wchar_t   NamePart3[2];
+} Lfn; // LongFileName
+
+
+//// Function to detect DirEntry / Longfilename
+void ParseDirEntry (uint dirSize)
+{//function
+  local uint i;
+  local char att;
+  
+  for (i=0; i < dirSize; ++i)
+  {// for
+    FSkip(11);
+    att = ReadByte();
+    FSkip(-11);
+    if (att == 0x0F) {
+      Lfn lfn <bgcolor=cYellow>;
+    }
+    else {// 1st else
+      if ((att & 0x10) == 0x10)
+        {
+          // If its a directory
+          DirEntry dir_entry <bgcolor=cLtGreen>;          
+        }
+      else {
+        if (ReadUByte() == 0xE5)
+                DirEntry dir_entry <bgcolor=cLtRed>;
+        else
+            DirEntry dir_entry <bgcolor=cLtBlue>;
+      }
+    }// 1st else
+  }//for
+}//function
+///// end function
+
+// Start Recursion Function
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Main Program starts here.   
+// EDIT BELOW THIS LINE
+//
+/////////////////////////////////////////////////////////////////////////////
+
+LittleEndian();
+
+local uint64 start_of_vol = 11264;
+
+FSeek(start_of_vol);
+
+FAT32_RESERVED_AREA reserved; // RESERVED AREA including boot sector
+
+
+//byte fat_area [ reserved.ExtBootSector.sectors_per_FAT * reserved.BootSector.num_FATs * 512]; // Replaced by two lines below
+uint FAT1[(uint)reserved.ExtBootSector.sectors_per_FAT * 512 / 4];  // We make the assumption that num_FATs is always 2 
+uint FAT2[(uint)reserved.ExtBootSector.sectors_per_FAT * 512 / 4];
+
+// You should now be at cluster 2.
+local uint64 cluster2 = 4202496;
+local uint rootDirSize = (uint)reserved.BootSector.sectors_per_cluster * (uint)reserved.BootSector.bytes_per_sector / 32; //FAT32
+// Dir might be larger than 1 cluster!! Follow FAT chain to find out.
+//lookup in extended root sector
+
+//FSeek(4202496);
+//ParseDirEntry(rootDirSize);
+
+// To parse any other directory:;
+local uint64 cluster_size = reserved.BootSector.sectors_per_cluster *512;
+                        
+//FSeek(0x410100);
+local int seekCluster = 17481;
+
+
+FSeek(cluster2 + ( cluster_size*(seekCluster-2) ) ); // SEEk to cluster 5 -dir "ONE"
+Printf(" \nClusterOffset: %d ", cluster2 + ( cluster_size*(seekCluster-2) ) );
+ParseDirEntry(512 * 1 / 32); //((bytes per sector) * (sectors per cluster) / 32 )``
+
+Printf("\nCluster Size: %d bytes\n", cluster_size);
+
+
+Printf("\n Green = Directory \n Red = Deleted \n Blue = File \n Yellow = Lfn");
+
+//29189

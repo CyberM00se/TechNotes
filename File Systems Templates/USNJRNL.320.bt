@@ -1,0 +1,64 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File: NTFS USNJRNL $J
+// Author: YK
+// Revision:
+// Purpose: FOR 320
+//--------------------------------------
+
+/* REASON FLAGS
+	DATA_OVERWRITE	    = 0x00000001,
+	DATA_EXTEND		    = 0x00000002,
+	DATA_TRUNCATION	    = 0x00000004,
+	NAMED_DATA_OVERWRITE= 0x00000010,
+	NAMED_DATA_EXTEND	= 0x00000020,
+	NAMED_DATA_TRUNCATION=0x00000040,
+	FILE_CREATE		    = 0x00000100,
+	FILE_DELETE		    = 0x00000200,
+	EA_CHANGE		    = 0x00000400,
+	SECURITY_CHANGE	    = 0x00000800,
+	RENAME_OLD_NAME	    = 0x00001000,
+	RENAME_NEW_NAME	    = 0x00002000,
+	INDEXABLE_CHANGE 	= 0x00004000,
+	BASIC_INFO_CHANGE   = 0x00008000,
+	HARD_LINK_CHANGE	= 0x00010000,
+	COMPRESSION_CHANGE	= 0x00020000,
+	ENCRYPTION_CHANGE	= 0x00040000,
+	OBJECT_ID_CHANGE 	= 0x00080000,
+	REPARSE_POINT_CHANGE= 0x00100000,
+	STREAM_CHANGE	    = 0x00200000,
+	CLOSE		        = 0x80000000
+*/
+
+
+typedef struct 
+{
+  DWORD         RecordLength;
+  WORD          MajorVersion; // usually 02
+  WORD          MinorVersion;
+  QUAD          FileReferenceNumber <format=hex>;
+  QUAD          ParentFileReferenceNumber<format=hex>;
+  QUAD          Usn;
+  FILETIME      TimeStamp;
+  DWORD         Reason  <format=hex>;
+  DWORD         SourceInfo;
+  DWORD         SecurityId;
+  DWORD         FileAttributes <format=hex>;
+  WORD          FileNameLength;
+  WORD          FileNameOffset;
+  wchar_t       FileName[FileNameLength / 2];
+  UBYTE         Padding[(RecordLength - 0x3C) - FileNameLength];
+} USN_RECORD_V2 <read=ReadUsn>;
+
+
+string ReadUsn(USN_RECORD_V2 &usn)javascript:void(0)
+{
+  return usn.FileName;
+}
+///////////////////////////
+
+LittleEndian();
+
+USN_RECORD_V2 usn[100] <optimize=false>; // Don't remove optimize=false
+

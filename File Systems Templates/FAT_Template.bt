@@ -1,0 +1,103 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.2 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+
+typedef struct 
+{
+	//extended fat12 and fat16 stuff
+	unsigned char		bios_drive_num;
+	unsigned char		reserved1;
+	unsigned char		boot_signature <format=hex>;
+	unsigned int		volume_id <format=hex>;
+	signed char		volume_label[11];
+	signed char		fat_type_label[8];
+ 
+} FAT_BS_Ext;
+ 
+typedef struct 
+{
+	unsigned char 		bootjmp[3];
+	signed char 		oem_name[8];
+	unsigned short 	    bytes_per_sector;
+	unsigned char		sectors_per_cluster;
+	unsigned short		reserved_sector_count;
+	unsigned char		table_count;
+	unsigned short		root_entry_count;
+	unsigned short		total_sectors_16;
+	unsigned char		media_type <format=hex>;
+	unsigned short		table_size_16;
+	unsigned short		sectors_per_track;
+	unsigned short		head_side_count;
+	unsigned int 		hidden_sector_count;
+	unsigned int 		total_sectors_32;
+ 
+} FAT_BS; // common for all FAT and some NTFS
+
+
+typedef struct 
+{
+  char          Name[8];
+  char          Ext[3];
+  byte          AttributeFlags <format=binary>;
+  byte          Reserved;
+  byte          Creation10msRes;
+  DOSTIME       CreatedTime;
+  DOSDATE       CreatedDate;
+  DOSDATE       LastAccessed;
+  unsigned short StartingClusterHighBytes; // zero for fat12/16
+  DOSTIME       ModTime;
+  DOSDATE       ModDate;
+  unsigned short StartingClusterLowBytes;
+  unsigned int  FileSize;
+} DirEntry;
+
+typedef struct
+{
+  byte      SequenceNum;
+  wchar_t   NamePart1[5];
+  byte      AttributeFlags <format=binary>;
+  byte      EntryType;
+  byte      Checksum;
+  wchar_t   NamePart2[6]; 
+  short     Zero;
+  wchar_t   NamePart3[2];
+} Lfn; // LongFileName
+
+// main program
+
+LittleEndian();
+
+FSeek(0); // go to partition
+
+FAT_BS fat_bs;
+
+FAT_BS_Ext fat_bs_ext;
+
+FSeek(0xa10000 + (320 * 512)); // start of partitions root dir
+
+DirEntry dir_entries[512];
+
+FSeek(0xA38200);
+Lfn long_name[7];
+
+// table size is measSured in terms of sectors
+// the unsighned short is the next sector.
+//ff ff fat 16 is fff8 or 0xffff
+
+// get to the start of the fat table jump over the reserve area by using reserved area sectors.
+// determine the type of fat. 16 = 2 bytes in size 32 = 4 bytes.
+// To find the specific sector jump to (sector * size in bytes)
+// you can see the next cluster in the unsigned short value field.
+
+
+// the entry name in the dir entries overrieds the no name

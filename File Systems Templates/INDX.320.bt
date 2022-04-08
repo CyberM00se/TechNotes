@@ -1,0 +1,229 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author: YK
+// Revision: 
+// Purpose: NTFS INDX Parsing
+//--------------------------------------
+
+local int index_root_type_id = 0x30; // FILE_NAME should always be 30
+
+typedef struct {
+  uint64		mft_segment  : 48;
+  uint64		mft_sequence : 16;
+} MFT_SEGMENT_REFERENCE;
+
+typedef struct {
+  MFT_SEGMENT_REFERENCE SegmentRef;
+  FILETIME      CreationTime;
+  FILETIME      LastWriteTime;
+  FILETIME      MftLastWriteTime;
+  FILETIME      LastAccessTime;
+  UQUAD         AllocatedSize;
+  UQUAD         DataSize;
+  INT           FileAttributes <format=hex>;
+  ULONG         AlignmentOrReserved;
+  BYTE          FileNameLength;
+  BYTE          Flags;  //Denotes namespace /* NTFS=0x01, DOS=0x02 */
+  wchar_t       FileName[FileNameLength];
+} ATTR_FILE_NAME <bgcolor=cLtGreen>;
+
+typedef enum tagAttributeType
+{
+    STANDARD_INFORMATION  = 0x10,
+    ATTRIBUTE_LIST        = 0x20,
+    FILE_NAME             = 0x30,
+    OBJECT_ID             = 0x40,
+	SECURITY_DESCRIPTOR   = 0x50,
+    VOLUME_NAME           = 0x60,
+    VOLUME_INFORMATION    = 0x70,
+    DATA                  = 0x80,
+    INDEX_ROOT            = 0x90,
+    INDEX_ALLOCATION      = 0xA0,
+    BITMAP                = 0xB0,
+    REPARSE_POINT         = 0xC0,
+	EA_INFORMATION        = 0xD0,
+	EA                    = 0xE0,
+	PROPERTY_SET          = 0xF0, //ntfs2.0
+	LOGGED_UTILITY_STREAM = 0x100
+} ATTRIBUTE_TYPE_CODE ;
+
+typedef struct 
+{
+	local int bIsValid;
+	char	magic[4];
+	if (Strcmp(magic, "INDX") == 0)
+	{
+		bIsValid = 1;
+		ushort  fixup_array_offset;
+		ushort  fixup_array_count;
+		uint64  LSN; // $LogFile Sequence Number
+		uint64  vcn;
+	}
+	else
+	{
+		bIsValid = 0;
+		Printf("INDX header not found at filepos = %LX", FTell()-4);
+	}
+} index_record_header;
+
+typedef struct 
+{
+	uint idx_start_offset;
+	uint idx_end_offset;           // total size of entries (including this header)
+	uint idx_allocated_end_offset; // total size allocted?  (including this header)
+	uint nonResidentFlag;             // 0=small index (resident), 1=large (non-resident)
+	FSeek(startof(idx_start_offset) + idx_start_offset);
+} index_node_header;
+
+typedef struct 
+{
+	ATTRIBUTE_TYPE_CODE	 attr_type_id;
+	int	 sorting_rule; // collation rule
+	int	 rec_size_b;   // size of index allocation entry = usually 4096
+	byte rec_size_c;
+	FSkip(3);
+} attr_index_root;
+
+typedef struct 
+{
+	MFT_SEGMENT_REFERENCE mft_reference;
+	ushort  entry_length;
+	if (entry_length > 10)
+	{
+		ushort  content_length;
+		int	 entry_flags; // 1 = entry points to sub-node, 2= last index entry
+		if (content_length > 0)
+		{
+			if (index_root_type_id == FILE_NAME)
+			{
+				ATTR_FILE_NAME fname ;
+			}
+			else
+			{
+				byte	content[content_length];
+			}
+		}
+		if ((entry_flags & 1) > 0)
+			uint64 child_node_vcn;
+	}
+} index_entry;
+
+string read_index_entry(index_entry& e)
+{
+	if (exists(e.fname))
+		return e.fname.FileName;
+	else
+		return "";
+}
+
+void add_index_entries(uint64 end) //adds the resident entries
+{
+	local int64 entry_end;
+	while(true)
+	{
+		index_entry entry <read=read_index_entry>;
+		if (exists(entry.entry_flags) && ((entry.entry_flags & 2) > 0))
+			break;
+
+		entry_end = startof(entry) + entry.entry_length;
+		if (entry_end >= end)
+			break;
+
+		FSeek(entry_end);
+	}
+}
+void add_index_hdr_n_entries(int fixups, int64 fixups_addr)
+{
+	index_node_header		idx_node_hdr;
+	
+	if (fixups > 0)
+	{
+		FSeek(fixups_addr);
+		short   fixup_value;
+		ushort  fixup[fixups];
+	}
+	
+	local uint64 entry_start = startof(idx_node_hdr) + idx_node_hdr.idx_start_offset;
+	local uint64 entry_end = startof(idx_node_hdr) + idx_node_hdr.idx_end_offset;
+	FSeek(entry_start);
+
+	Printf("entry_end = %Lx\t%x\n", idx_node_hdr.idx_end_offset, entry_end);	
+	
+	add_index_entries(entry_end);
+}
+
+typedef struct 
+{
+	index_record_header		idx_rec_hdr;
+	if (idx_rec_hdr.bIsValid)
+		add_index_hdr_n_entries(idx_rec_hdr.fixup_array_count, startof(idx_rec_hdr) + idx_rec_hdr.fixup_array_offset);
+} index_cluster_node <read=read_index_cluster_node>;
+
+string read_index_cluster_node(index_cluster_node& node)
+{
+	string s;
+	SPrintf(s, "# %d", node.idx_rec_hdr.vcn);
+	return s;
+}
+
+///////////////////////////////////////////////////////////////////////
+/// Use below functions for resident or non-resident INDX buffers
+
+void Add_Index_Resident() { 
+  attr_index_root idx_root_hdr;
+  index_root_type_id = idx_root_hdr.attr_type_id;
+  add_index_hdr_n_entries(0,0);
+}
+
+void Add_Index_NonResident() {
+  index_cluster_node indx; 
+}
+/////////////////////////////////////////////////////////////////////////
+
+LittleEndian();
+
+
+//FSeek(5668864);  // $Recycle.Bin, resident index stream, no INDX header
+//Add_Index_Resident();
+
+//FSeek(0x5C6D50);  // INDX buffer of \Dir folder, non-resident stream
+
+
+FSeek(26992640);
+Add_Index_NonResident();  
+
+
+//FSeek(5672960);
+//Add_Index_NonResident();
+
+
+FSeek(26993032);
+ATTR_FILE_NAME filename_info;
+/*
+FSeek(0x5B6278);
+ATTR_FILE_NAME filename_info2;
+
+FSeek(0x5B6310);
+ATTR_FILE_NAME filename_info3;
+
+FSeek(0x5B6388);
+ATTR_FILE_NAME filename_info4;
+
+FSeek(5B63F8h);
+ATTR_FILE_NAME filename_info5;
+
+FSeek(5B6480h);
+ATTR_FILE_NAME filename_info6;
+
+FSeek(5B64F0h);
+ATTR_FILE_NAME filename_info7;
+//FSeek(***put address here****);
+//ATTR_FILE_NAME filename_info2;
+
+FSeek(5B6590h);
+ATTR_FILE_NAME filename_info8;
+
+*/
+

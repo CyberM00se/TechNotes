@@ -1,0 +1,51 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.2 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct{
+    char signature; //EFI PART
+    uint32 revision; 
+    uint32 header_size;
+    uint32 crc32;
+    uint32 reserved;
+    uint64 current_lba;
+    uint64 backup_lba;
+    uint64 first_usable_lba;
+    uint64 last_usable_lba;
+    byte disk_guid[16];
+    uint32 total_partition_slots;
+    uint32 size_partition_slot;
+    uint32 crc32_partition_array;
+    byte reserved_2[420]; // you could also do FSkip(420)
+    
+    
+} GPT_Header;
+
+typedef struct{
+    byte part_type_guid[16];
+    byte part_uniq_guid[16];
+    uint64 start_lba;
+    uint64 end_lba;
+    uint64 attributes;
+    wchar_t name[36]; //2 bytes per char cause its unicode
+
+} GPT_Part_Entry;
+
+//program starts here
+
+LittleEndian();
+FSeek(512);
+
+GPT_Header header;
+GPT_Part_Entry gpt_entries[crc32_partition_array]; //index is 128
+
+

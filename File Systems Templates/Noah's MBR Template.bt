@@ -1,0 +1,144 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.2 Binary Template
+//
+//      File: 
+//   Authors: Noah Beckman
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct {
+    byte bootable;
+    byte CHS_Start[3];
+    byte PartitionType <format=hex>;
+    byte CHS_End[3];
+    uint32 start_sector;
+    uint32 size_in_sectors;
+} Partition_Entry;
+
+// Count of how many ext partitions there are
+local int extPartCount = 0;
+local int partitionByteTotal = 0;
+// Container Offest
+local int contOffset = 0;
+// We want to read as little endian
+LittleEndian();
+
+// Got to the offset
+FSeek(0x1BE);
+// Create a partition entry at the current offset
+Partition_Entry entry[4];
+// Check the Paritions for extended types and search those
+extendedPartitionCheck(entry);
+
+
+int getArrayLength(struct Partition_Entry array[])
+{
+    local int length = sizeof(array) / sizeof(array[0]);
+    return length;
+}
+
+// Checks to see if there is an extended partition
+void extendedPartitionCheck(struct Partition_Entry array[])
+{
+    local int i;
+    Printf("Always check the partition type as it doesnt output in hex!");
+    Printf("--------------------------------------- \n");
+    // loop over each partition
+    for (i = 0; i < getArrayLength(array); i++)
+    {
+                
+        Printf("\n");
+        Printf("%s %d %s %d %s %d %s %d", "Bootable: ", array[i].bootable, " Partition Type: ", array[i].PartitionType, " Start Sector: ", array[i].start_sector, " Size In Sectors: ", array[i].size_in_sectors);
+        Printf("\n");        
+
+        if(array[i].PartitionType == 5 || array[i].PartitionType == 0xf)
+        {
+            local int startOffset;
+            //Calculate the Start Offset: Multiply Start Sector * 512 and add the container start offset
+            startOffset = (array[i].start_sector * 512) + contOffset;
+            contOffset = startOffset;
+            //if there is a extended partition do:
+            Printf("--------------------------------------- \n");
+            Printf("%s", "EXT PARTITION DETECTED \n");
+            Printf("%s %d %s", "StartOffset:", startOffset, "\n");
+            Printf("%s %d %s", "Container Offset:", contOffset, "\n");
+            extPartCount++;
+            partitionByteTotal += (array[i].start_sector * 512);
+            CreateExtPartTable(array, i, contOffset);
+            return;
+        }
+    }
+    
+}
+
+Printf("\n");
+
+void CreateExtPartTable(struct Partition_Entry array[], int num, int offset)
+{
+    
+    // Variable
+    local int32 ext_part_start;
+    // Multiply the sector by 512 to get the offset
+    ext_part_start = (offset) + 446;
+
+    Printf("%s %d", "Ext part starts at:", ext_part_start);
+    Printf("\n");
+    // Go to the offset
+    FSeek (ext_part_start); 
+    //Analyze the Info
+    if (extPartCount == 1)
+    {
+        Partition_Entry ext_entry[4];
+        //Check again for Extendend Partitions
+        extendedPartitionCheck(ext_entry);
+    } 
+    else if (extPartCount == 2)
+    {
+        Partition_Entry ext_entry2[4];
+        //Check again for Extendend Partitions
+        extendedPartitionCheck(ext_entry2);
+    }
+    else if (extPartCount == 3)
+    {
+        Partition_Entry ext_entry3[4];
+        //Check again for Extendend Partitions
+        extendedPartitionCheck(ext_entry3);
+    }
+    else if (extPartCount == 4)
+    {
+        Partition_Entry ext_entry4[4];
+        //Check again for Extendend Partitions
+        extendedPartitionCheck(ext_entry4);
+    }
+    else
+    {
+        Printf("%s ", "More Than 4 Extended Partition Tables");
+    } 
+}
+
+// to be implemented
+/*
+const char getPartitionCode(byte hexcode)
+{
+	//local char hexString = "";
+	switch (hexcode)
+	{
+		case '0':
+			return "Empty Partition";
+		default :
+			return "Partition Not In Function!";
+	}
+	
+}
+*/
+Printf("%s %d", "Total bytes from partitions: ", partitionByteTotal);
+// jumping to the partition table
+
+Printf("%s ", "\nDouble Check Partition Tables");
+
+

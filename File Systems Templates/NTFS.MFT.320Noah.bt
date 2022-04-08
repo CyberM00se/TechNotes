@@ -1,0 +1,160 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:   NTFS MFT structure and attributes
+// Author: Yogesh Khatri
+// Revision:
+// Purpose: FOR 320
+//--------------------------------------
+
+typedef struct {
+  uint64		mft_segment  : 48;
+  uint64		mft_sequence : 16;
+} MFT_SEGMENT_REFERENCE;
+
+typedef struct {
+  MFT_SEGMENT_REFERENCE ParentRef;
+  FILETIME      CreationTime;
+  FILETIME      LastWriteTime;
+  FILETIME      MftLastWriteTime;
+  FILETIME      LastAccessTime;
+  UQUAD         AllocatedSize;
+  UQUAD         DataSize;
+  ULONG         FileAttributes;
+  ULONG         AlignmentOrReserved;
+  BYTE          FileNameLength;
+  BYTE          Flags;  //Denotes namespace /* NTFS=0x01, DOS=0x02 */
+  wchar_t       FileName[FileNameLength];
+} ATTR_FILE_NAME <bgcolor=cLtGreen>;
+
+typedef enum tagAttributeType
+{
+    STANDARD_INFORMATION  = 0x10,
+    ATTRIBUTE_LIST        = 0x20,
+    FILE_NAME             = 0x30,
+    OBJECT_ID             = 0x40,
+	SECURITY_DESCRIPTOR   = 0x50,
+    VOLUME_NAME           = 0x60,
+    VOLUME_INFORMATION    = 0x70,
+    DATA                  = 0x80,
+    INDEX_ROOT            = 0x90,
+    INDEX_ALLOCATION      = 0xA0,
+    BITMAP                = 0xB0,
+    REPARSE_POINT         = 0xC0,
+	EA_INFORMATION        = 0xD0,
+	EA                    = 0xE0,
+	PROPERTY_SET          = 0xF0, //ntfs2.0
+	LOGGED_UTILITY_STREAM = 0x100
+} ATTRIBUTE_TYPE_CODE ;
+
+typedef struct {
+  ATTRIBUTE_TYPE_CODE   AttributeTypeCode;
+  ULONG                 RecordLength;
+  UBYTE                 AttributeNameLength;
+  USHORT                AttributeNameOffset;
+  UQUAD                 LowestVcn;
+  MFT_SEGMENT_REFERENCE SegmentReference;
+  USHORT                Instance; //Reserved;
+  wchar_t               AttributeName[AttributeNameLength];
+} ATTR_ATTRIBUTE_LIST_ENTRY ;
+
+typedef struct  {
+  ATTRIBUTE_TYPE_CODE TypeCode;
+  ULONG               RecordLength;
+  BYTE                IsNonResident;
+  BYTE                NameLength;
+  USHORT              NameOffset;
+  USHORT              Flags; //0x0001 = Compressed, 0x4000 = Encrypted, 0x8000 = Sparse
+  USHORT              AttributeId;
+  if (IsNonResident == 0) /*resident entry */ {
+      ULONG     ValueLength;
+      USHORT    ValueOffset;
+	  USHORT    IndexedFlag; // 0x0001 = Indexed
+  }
+  else {                  /* non resident  */
+      QUAD      LowestVcn;
+      QUAD      HighestVcn;
+      USHORT    RunArrayOffset;
+	  USHORT    CompressionUnit;
+      BYTE      Reserved[4];
+      UQUAD     AllocatedLength; // AllocatedSize
+      UQUAD     FileSize;        // DataSize
+      UQUAD     ValidDataLength; // InitializedSize
+      if (Flags & 1)
+        UQUAD   TotalAllocated;  // CompressedSize (only for compressed data)
+  };
+} ATTRIBUTE_RECORD_HEADER <bgcolor=0x9F3AF9>;
+
+typedef struct {
+   FILETIME CreationTime;
+   FILETIME FileChangeTime;
+   FILETIME MftChangeTime;
+   FILETIME LastAccessTime;
+   ULONG    FileAttributes;  // READ_ONLY=0x01, HIDDEN=0x02, SYSTEM=0x04, VOLUME_ID=0x08, ARCHIVE=0x20, DEVICE=0x40, NORMAL=0x80, TEMPORARY=0x100, SPARSE=0x200, REPARSE_POINT=0x400, COMPRESSED=0x800, OFFLINE=0x1000, NOT_CONTENT_INDEXED=0x2000, ENCRYPTED=0x4000
+   ULONG    MaximumVersions; // Zero means versioning is disabled
+   ULONG    VersionNumber;   
+   ULONG    ClassId;
+   ULONG    OwnerId;                   // NTFS 3.0 only // Index into $QUOTA streams $O & $Q
+   ULONG    SecurityId;                // NTFS 3.0 only
+   UQUAD    QuotaCharged;              // NTFS 3.0 only
+   UQUAD    Usn;                       // NTFS 3.0 only // Index into USN Journal
+} ATTR_STANDARD_INFORMATION <bgcolor=0xFF9966>;
+
+
+typedef struct {
+   	char	magic[4];       // FILE or BAAD 
+    ushort  fixup_offset;   // Fixup = Update Sequence Array
+    ushort  fixup_count;
+    uint64  logfile_USN;
+    ushort  sequence_number;
+    ushort  hard_link_count;
+    ushort  attr_offset;
+    ushort  flags <format=binary>;          // 01 = allocated(in-use), 02 = folder
+    uint	mft_entry_size;
+    uint	mft_entry_allocated;
+    uint64  base_file_pointer;
+    ushort  next_attr_number;
+    ushort  padding;
+    uint    record_num;   // encase's FileId
+} MftEntryHeader <bgcolor=0xCCCCCC>;
+
+//-----------------------
+LittleEndian();
+
+local int hexOffset = 0x76FC00;
+
+FSeek(hexOffset); // <------ Enter offset of MFT Entry for ntfs.dragon.3.vhd
+MftEntryHeader  mftheader;
+
+
+FSeek(hexOffset + mftheader.attr_offset); // <-- Seeking to offset of 1st attribute
+ATTRIBUTE_RECORD_HEADER   attribute_header_1;
+
+ATTR_STANDARD_INFORMATION stdinfo;
+
+
+FSeek(hexOffset + mftheader.attr_offset + attribute_header_1.RecordLength);  // <-- Seeking to offset of another attribute
+ATTRIBUTE_RECORD_HEADER   attribute_header_2;
+ATTR_FILE_NAME  filename;
+
+
+FSeek(hexOffset + mftheader.attr_offset + attribute_header_1.RecordLength + attribute_header_2.RecordLength);
+ATTRIBUTE_RECORD_HEADER   attribute_header_3;
+
+
+FSeek(hexOffset + mftheader.attr_offset + attribute_header_1.RecordLength + attribute_header_2.RecordLength + attribute_header_3.RecordLength);
+ATTRIBUTE_RECORD_HEADER   attribute_header_4;
+
+FSeek(hexOffset + mftheader.attr_offset + attribute_header_1.RecordLength + attribute_header_2.RecordLength + attribute_header_3.RecordLength + attribute_header_4.RecordLength);
+ATTRIBUTE_RECORD_HEADER   attribute_header_5;
+
+FSeek(hexOffset + mftheader.attr_offset + attribute_header_1.RecordLength + attribute_header_2.RecordLength + attribute_header_3.RecordLength + attribute_header_4.RecordLength + attribute_header_5.RecordLength);
+ATTRIBUTE_RECORD_HEADER   attribute_header_6;
+
+/*
+FSeek(0x76FC00 + mftheader.attr_offset + attribute_header_1.RecordLength + attribute_header_2.RecordLength + attribute_header_3.RecordLength + attribute_header_4.RecordLength + attribute_header_5.RecordLength + attribute_header_6.RecordLength);
+ATTRIBUTE_RECORD_HEADER   attribute_header_7;
+*/
+
+// allocated length = physical size
+// filesize = logical

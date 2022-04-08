@@ -1,0 +1,243 @@
+//------------------------------------------------
+//--- 010 Editor v10.0 Binary Template
+//
+//      File: 
+//   Authors: Noah Beckman
+//   Version: 
+//   Purpose: GPT parsing
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+
+typedef struct {
+  char   signature[8]; // 'EFI PART'
+  uint32 revision;
+  uint32 header_size;
+  uint32 crc32;
+  uint32 reserved;
+  uint64 current_lba;
+  uint64 backup_lba;
+  uint64 first_usable_lba;
+  uint64 last_usable_lba;
+  byte   disk_guid[16];
+  uint64 lba_of_part_entry_array;
+  uint32 total_partition_slots;
+  uint32 size_partition_slot;
+  uint32 crc32_partition_array;
+  //byte   reserved_2[420];
+  FSkip(420);
+} GPT_Header;
+
+typedef struct {
+  ubyte part_type_guid[16] <format=hex>;
+  ubyte part_uniq_guid[16];
+  uint64 start_lba;
+  uint64 end_lba;
+  uint64 attributes;
+  wchar_t name[36];
+} GPT_Part_Entry;
+
+int getArrayLengthubyte(ubyte array[])
+{
+    local int length = sizeof(array) / sizeof(array[0]);
+    return length;
+}
+int getArrayLengthint(int array[])
+{
+    local int length = sizeof(array) / sizeof(array[0]);
+    return length;
+}
+int getArrayLengthGpt(struct GPT_Part_Entry array[])
+{
+    local int length = sizeof(array) / sizeof(array[0]);
+    return length;
+}
+int getArrayLengthChar(char array[])
+{
+    local int length = sizeof(array) / sizeof(array[0]);
+    return length;
+}
+// program starts here
+LittleEndian();
+FSeek(8639);
+GPT_Header header;
+GPT_Part_Entry gpt_entries[header.size_partition_slot];
+
+string calcHexNum(int num)
+{
+    local int decimalNumber,remainder,quotient;
+	local int i=1,j,temp;
+	local char hexadecimalNumber[100];
+
+    local char returnText;
+	decimalNumber = num;
+	quotient = decimalNumber;
+	while(quotient!=0) {
+		temp = quotient % 16;
+		//To convert integer into character
+		if( temp < 10)
+		           temp =temp + 48; else
+		         temp = temp + 55;
+		hexadecimalNumber[i++]= temp;
+		quotient = quotient / 16;
+	}
+	//Printf("Decimal Value %d: ", decimalNumber);
+	//Printf("    Hex: ");
+    for (j = i -1 ;j> 0;j--)
+            
+	      Printf("%c", hexadecimalNumber[j]);
+          //returnText += hexadecimalNumber[j];
+    Printf("");
+    return returnText;
+}
+
+void printSize (int num)
+{
+    local int sizebyte = 0;
+    local int sizeSector = 0;    
+    sizeSector = (gpt_entries[num].end_lba - gpt_entries[num].start_lba + 1);
+    sizebyte = sizeSector * 512;
+    
+    Printf("Partition Size In Bytes: %d Bytes", sizebyte);
+    Printf("\n");
+    Printf("Partition Size In Sector: %d Sectors", sizeSector);
+    Printf("\n");
+
+}
+
+int getPartBytes(int num)
+{
+    local int sizebyte = 0;
+    local int sizeSector = 0;    
+    sizeSector = (gpt_entries[num].end_lba - gpt_entries[num].start_lba + 1);
+    sizebyte = sizeSector * 512;
+    return sizebyte;
+}
+void printWastedSpace()
+{
+    local int wastedSpace = 0;
+    wastedSpace = (FileSize()) - (partitionBytes) - (33 * 512) - (34 * 512);
+
+    Printf("Total Wasted Space: %d bytes", wastedSpace);
+}
+
+void getTypeGUID (ubyte array[])
+{
+    local int i;
+    local int hexNum;
+    
+    Printf("%s", calcHexNum(array[3]));      
+    Printf("%s", calcHexNum(array[2]));   
+    Printf("%s", calcHexNum(array[1]));   
+    Printf("%s", calcHexNum(array[0]));
+    Printf(" - ");   
+    Printf("%s", calcHexNum(array[5]));   
+    Printf("%s", calcHexNum(array[4]));  
+    Printf(" - "); 
+    Printf("%s", calcHexNum(array[7]));   
+    Printf("%s", calcHexNum(array[6]));
+    Printf(" - ");
+    Printf("%s", calcHexNum(array[8]));  
+    Printf("%s", calcHexNum(array[9])); 
+    Printf(" - "); 
+    Printf("%s", calcHexNum(array[10]));  
+    Printf("%s", calcHexNum(array[11]));  
+    Printf("%s", calcHexNum(array[12]));  
+    Printf("%s", calcHexNum(array[13]));  
+    Printf("%s", calcHexNum(array[14]));  
+    Printf("%s", calcHexNum(array[15]));     
+}
+
+void printDiskGUID()
+{
+    Printf("DISK  GUID: ");
+    Printf("%s", calcHexNum(header.disk_guid[3]));
+    Printf("%s", calcHexNum(header.disk_guid[2]));
+    Printf("%s", calcHexNum(header.disk_guid[1]));
+    Printf("%s", calcHexNum(header.disk_guid[0]));
+    Printf(" - "); 
+    Printf("%s", calcHexNum(header.disk_guid[5]));
+    Printf("%s", calcHexNum(header.disk_guid[4]));
+    Printf(" - "); 
+    Printf("%s", calcHexNum(header.disk_guid[7]));
+    Printf("%s", calcHexNum(header.disk_guid[6]));
+    Printf(" - "); 
+    Printf("%s", calcHexNum(header.disk_guid[8]));
+    Printf("%s", calcHexNum(header.disk_guid[9]));
+    Printf(" - "); 
+    Printf("%s", calcHexNum(header.disk_guid[10]));
+    Printf("%s", calcHexNum(header.disk_guid[11]));
+    Printf("%s", calcHexNum(header.disk_guid[12]));
+    Printf("%s", calcHexNum(header.disk_guid[13]));
+    Printf("%s", calcHexNum(header.disk_guid[14]));
+    Printf("%s", calcHexNum(header.disk_guid[15]));
+}
+
+void printGUIDs(int num)
+{
+    Printf("\n");
+
+
+    Printf("Partition Type GUID: ");
+    getTypeGUID(gpt_entries[0].part_type_guid);
+
+    Printf("\n");
+
+
+    Printf("UNIQUE GUID: ");
+    getTypeGUID(gpt_entries[num].part_uniq_guid);
+
+    Printf("\n");    
+    
+}
+
+void printLine()
+{
+    Printf("\n-----------------------\n");
+}
+
+//Printf("%d", getArrayLengthGpt(gpt_entries));
+
+// MAIN PROGRAM
+// get the total amount of partitions
+local int gptEntriesLength = getArrayLengthGpt(gpt_entries);
+//define increment var
+local int x = 0;
+local int partitionBytes = 0;
+// Main loop for each partition
+// Remember that the partition count starts at 0
+for(x = 0; x < gptEntriesLength; x++)
+{
+    if(gpt_entries[x].end_lba != 0)
+    {
+        Printf("-----------------------\n");
+        Printf("Parition: %d: \n", x);
+        //print unique guid
+        //print partition type id
+        printGUIDs(x);
+        //print size of partition in bytes
+        //print size of partition in sectors
+        printSize(x);
+        
+        partitionBytes += getPartBytes(x);
+        
+    }
+}
+printLine();
+// total wasted space = total disk size - (sum of all allocated partitions)
+// ex. (82886080) - (40894976 + 31457280) - (33 * 512) - (34 * 512)
+printWastedSpace();
+printLine();
+//Print the Disk GUID
+printDiskGUID();
+
+
+// analyze protective mbr
+
+
+
+
+
